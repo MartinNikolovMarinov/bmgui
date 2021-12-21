@@ -109,12 +109,17 @@ void inline __panicHandler(constptr char *_msg)
 
 #pragma endregion Try
 
-#pragma region Intregers
+#pragma region Integers
+
+bool8 IsInRange(u32 _min, u32 _n, u32 _max);
+bool8 IsInRangeInc(u32 _min, u32 _n, u32 _max);
+bool8 IsInRange(i32 _min, i32 _n, i32 _max);
+bool8 IsInRangeInc(i32 _min, i32 _n, i32 _max);
 
 i32 DigitCountI64(i64 _n);
 i32 DigitCountI32(i32 _n);
 
-#pragma endregion Intregers
+#pragma endregion Integers
 
 #pragma region Math
 
@@ -144,6 +149,13 @@ char LeastSignificatDigitI64ToChar(i64 _digit);
 
 #pragma endregion Raw String
 
+#pragma region Rune
+
+Optional<rune> RuneFromUTF8Sequence(constptr uchar* _utf8Seq, i32 _len);
+Optional<i32> RuneToUTF8Sequence(rune _rune, modptr uchar* _utf8Seq);
+
+#pragma endregion Rune
+
 #pragma region Random
 
 void InitRand();
@@ -158,6 +170,12 @@ u64 GetTimeNowMS();
 void ThreadSleep(u64 ms);
 
 #pragma endregion Time
+
+#pragma region Bits
+
+bool8 FirstNBitsAre(u8 _v, u8 _n, u8 _bits);
+
+#pragma endregion Bits
 
 } // namespace core
 

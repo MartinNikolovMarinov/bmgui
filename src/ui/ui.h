@@ -75,8 +75,8 @@ namespace ui
 
     struct Keyboard {
         ModifierFlags modifierFlags;
-        Key keys[MAX_PRESSED_KEYS]; // max pressed keys on a single frame = 15
-        i32 keysLen;
+        Key pressedKeys[MAX_PRESSED_KEYS]; // max pressed keys on a single frame = 15
+        i32 pressedKeysLen;
     };
 
     enum class MouseBtn {

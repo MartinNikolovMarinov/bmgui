@@ -5,6 +5,8 @@
 #include "core/raw_str.cpp"
 #include "core/rnd.cpp"
 #include "core/time.cpp"
+#include "core/rune.cpp"
+#include "core/bits.cpp"
 #include "ui/ui.cpp"
 
 #include "core/core.h"

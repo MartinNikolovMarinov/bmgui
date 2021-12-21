@@ -62,18 +62,23 @@ typedef double f64;
 typedef u8  bool8;
 typedef u32 bool32;
 
+typedef unsigned char uchar;
+
+// Runes represent a single UTF-32 encoded character.
+typedef char32_t rune;
+
 // Pointer size specific types:
 typedef size_t index_size;
 
 // Special constants :
-#define true  1
-#define false 0
-#define null  0
-#define term_char '\0'
+#define true  (1)
+#define false (0)
+#define null  (0)
+#define term_char ('\0')
 
-#define STDIN  0
-#define STDOUT 1
-#define STDERR 2
+#define STDIN  (0)
+#define STDOUT (1)
+#define STDERR (2)
 
 // Storage Sizes
 #define BYTE        ((i64)1)
