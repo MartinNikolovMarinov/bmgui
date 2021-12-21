@@ -1,0 +1,12 @@
+#include "core/integers.cpp"
+#include "core/math.cpp"
+#include "core/platform.cpp"
+#include "core/print.cpp"
+#include "core/raw_str.cpp"
+#include "core/rnd.cpp"
+#include "core/time.cpp"
+#include "ui/ui.cpp"
+
+#include "core/core.h"
+#include "core/types.h"
+#include "ui/ui.h"
