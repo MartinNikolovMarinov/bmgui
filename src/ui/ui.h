@@ -1,8 +1,8 @@
 #ifndef UI_H
 #define UI_H 1
 
-#include "../core/core.h"
-#include "../core/types.h"
+#include "../../lib/core/src/core.h"
+#include "../../lib/core/src/types.h"
 
 namespace ui
 {
