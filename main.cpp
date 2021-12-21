@@ -181,62 +181,6 @@ void HandleEvent(constptr SDL_Event *_event, modptr bool8 *_quit, modptr UiCtx* 
 
 i32 main(i32 argc, constptr char **argv, constptr char **_envp)
 {
-
-#pragma region TODO: MOVE THIS CODE TO A TEST In Core !
-    // uchar d[10] = {}; // = "д" // 1076
-
-    // NOTE: from 0 to 127 use 1 byte.
-
-    // // 0 is NULL, MINUMUM 1 byte encoded character!
-    // d[0] = 0;
-
-    // // 127 is DELETE, which is the the MAXIMUM 1 byte encoded character!
-    // d[0] = 127;
-
-    // NOTE: from 128 to 2047 use 2 bytes.
-
-    // // 194, 128 is , which is the MINIMUM 2 byte encoded character! (it is not getting displayed very well)
-    // d[0] = 194;
-    // d[1] = 128;
-
-    // "д" symbol
-    // d[0] = 208;
-    // d[1] = 180;
-
-    // // 223, 191 is ߿ , which is the MAXIMUM 2 byte encoded character!
-    // d[0] = 223;
-    // d[1] = 191;
-
-    // NOTE: from 2048 to 65535 use 3 bytes
-
-    // // 224, 160, 128 is ࠀ, which is the MINIMUM 3 byte encoded character!
-    // d[0] = 224;
-    // d[1] = 160;
-    // d[2] = 128;
-
-    // // 224, 160, 128 is ࠀ, which is the MAXIMUM 3 byte encoded character!
-    // d[0] = 224;
-    // d[1] = 160;
-    // d[2] = 128;
-
-    // NOTE: from 65535 to MAX use 4 bytes
-
-    // // // poop emoji:
-    // d[0] = 240;
-    // d[1] = 159;
-    // d[2] = 146;
-    // d[3] = 169;
-
-    // i32 len = StrLen((constptr char *)d);
-    // rune r1 = TryOrFail(RuneFromUTF8Sequence(d, len));
-    // PrintF("%s\n", (char*)d);
-
-    // uchar d2[5] = {};
-    // i32 d2Len = TryOrFail(RuneToUTF8Sequence(r1, d2));
-
-    // return 0;
-#pragma endregion
-
     const i32 DELAY = 40;
     const i32 MAX_EVENTS_PER_FRAME = 20;
 
