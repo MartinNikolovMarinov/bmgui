@@ -57,7 +57,7 @@ namespace ui
 
     struct Key {
         bool8 isDown, isHeld;
-        i32 keyCode, keyUSBScanCode;
+        i32 keyCode, KeyScanCodeUSB;
     };
 
     enum class ModifierFlags {

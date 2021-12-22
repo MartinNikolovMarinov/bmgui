@@ -21,6 +21,7 @@ bool8 PullEventFromSDLQueue(modptr SDL_Event *_event)
 
 char* DEBUG_ModifierToCharPtr(ModifierFlags mod, modptr char* buff)
 {
+    // TODO: implement strcat!
     char* curr = buff;
     if(mod == ModifierFlags::NONE) {
         curr = strcat(curr, "NONE");
@@ -54,19 +55,20 @@ bool8 IsLocksModifierKey(i32 keyCode)
 
 ModifierFlags SDLModifierToBMGuiModifier(i32 keyCode)
 {
-    if (keyCode == SDLK_LCTRL || keyCode == SDLK_RCTRL) return ModifierFlags::CTRL;
-    if (keyCode == SDLK_LSHIFT || keyCode == SDLK_RSHIFT) return ModifierFlags::SHIFT;
-    if (keyCode == SDLK_LALT || keyCode == SDLK_RALT) return ModifierFlags::ALT;
-    if (keyCode == SDLK_CAPSLOCK) return ModifierFlags::CAPS_LOCK;
-    if (keyCode == SDLK_NUMLOCKCLEAR) return ModifierFlags::NUM_LOCK;
-    if (keyCode == SDLK_SCROLLLOCK) return ModifierFlags::SCROLL_LOCK;
+    if (keyCode == SDLK_LCTRL || keyCode == SDLK_RCTRL)     return ModifierFlags::CTRL;
+    if (keyCode == SDLK_LSHIFT || keyCode == SDLK_RSHIFT)   return ModifierFlags::SHIFT;
+    if (keyCode == SDLK_LALT || keyCode == SDLK_RALT)       return ModifierFlags::ALT;
+    if (keyCode == SDLK_CAPSLOCK)                           return ModifierFlags::CAPS_LOCK;
+    if (keyCode == SDLK_NUMLOCKCLEAR)                       return ModifierFlags::NUM_LOCK;
+    if (keyCode == SDLK_SCROLLLOCK)                         return ModifierFlags::SCROLL_LOCK;
+
     return ModifierFlags::NONE;
 }
 
 void HandleKeyPress(constptr SDL_Event *_event, modptr UiCtx* _ctx)
 {
     i32 keyCode = _event->key.keysym.sym;
-    i32 scanCode = _event->key.keysym.scancode;
+    i32 scanCodeFromUSB = _event->key.keysym.scancode;
     bool8 keyIsDown = (_event->type == SDL_KEYDOWN);
 
     if (IsNormalModifierKey(keyCode) == true) {
@@ -119,7 +121,7 @@ void HandleKeyPress(constptr SDL_Event *_event, modptr UiCtx* _ctx)
     if (keyIsDown == true && found == false) {
         // If the current key press event is keydown, and the key is not found in the keyboard state,
         // it needs to be added to the ui context.
-        Key key = { true, false, keyCode, scanCode };
+        Key key = { true, false, keyCode, scanCodeFromUSB };
         _ctx->input.keyboard.pressedKeys[_ctx->input.keyboard.pressedKeysLen] = key;
         _ctx->input.keyboard.pressedKeysLen++;
     }
@@ -132,8 +134,23 @@ void HandleKeyPress(constptr SDL_Event *_event, modptr UiCtx* _ctx)
     for (i32 i = 0; i < _ctx->input.keyboard.pressedKeysLen; i++) {
         Key key = _ctx->input.keyboard.pressedKeys[i];
         PrintF("EVENT KEY PRESS: keyCode = %d, isDown = %d, isHeld = %d, keyUSBScanCode = %d, modifiers = %s \n",
-                key.keyCode, key.isDown, key.isHeld, key.keyUSBScanCode, buf);
+                key.keyCode, key.isDown, key.isHeld, key.KeyScanCodeUSB, buf);
     }
+}
+
+void HandleMouseMove(constptr SDL_Event *_event, modptr UiCtx* _ctx)
+{
+    // _event->motion.state
+    _ctx->input.mouse.pos.x = _event->motion.x;
+    _ctx->input.mouse.pos.y = _event->motion.y;
+    _ctx->input.mouse.delta.x = _event->motion.xrel;
+    _ctx->input.mouse.delta.y = _event->motion.yrel;
+
+    PrintF("EVENT MOUSE MOVE: x = %d, y = %d, dx = %d, dy = %d\n",
+            _event->motion.x,
+            _event->motion.y,
+            _ctx->input.mouse.delta.x,
+            _ctx->input.mouse.delta.y);
 }
 
 void HandleEvent(constptr SDL_Event *_event, modptr bool8 *_quit, modptr UiCtx* _ctx)
@@ -143,14 +160,12 @@ void HandleEvent(constptr SDL_Event *_event, modptr bool8 *_quit, modptr UiCtx* 
         return;
     }
 
-    //!! TODO2: Events to read about and handle next: SDL_TEXTINPUT, SDL_KEYMAPCHANGED, SDL_TEXTEDITING !!
-
     bool8 isKeyPress = (_event->type == SDL_KEYDOWN || _event->type == SDL_KEYUP);
     if (isKeyPress == true) {
         HandleKeyPress(_event, _ctx);
         return;
     } else if (_event->type == SDL_TEXTINPUT) {
-        // _event->text.text is created for wide characters.
+        // TODO: Debug code:
         i32 textLen = StrLen(_event->text.text);
         Optional<rune> optRune = RuneFromUTF8Sequence((uchar*)_event->text.text, textLen);
         if (optRune.err != null) {
@@ -158,24 +173,30 @@ void HandleEvent(constptr SDL_Event *_event, modptr bool8 *_quit, modptr UiCtx* 
             SprintF(panicMsg, "Failed to parse UTF-32 rune in %s \n", _event->text.text);
             Panic(panicMsg);
         }
+        char testText[SDL_TEXTINPUTEVENT_TEXT_SIZE] = {};
+        RuneToUTF8Sequence(optRune.val, (uchar*)testText);
+        AssertMsg(StrCmp(testText, _event->text.text) == 0, "UTF-8 Encode/Decode is failing");
+
         PrintF("EVENT TEXT INPUT: value = %s, UTF-32 rune = %lu \n", _event->text.text, optRune.val);
         return;
     } else if (_event->type == SDL_KEYMAPCHANGED) {
         // TODO: Keymapchange seems to happen on every button press. Why ?
         return;
-    } else if (_event->type == SDL_MOUSEMOTION ||
-               _event->type == SDL_MOUSEBUTTONDOWN ||
-               _event->type == SDL_MOUSEBUTTONUP ||
-               _event->type == SDL_MOUSEWHEEL
-    ) {
-        // Mouse state change
+    } else if (_event->type == SDL_MOUSEMOTION) {
+        HandleMouseMove(_event, _ctx);
+        return;
+    } else if (_event->type == SDL_MOUSEBUTTONDOWN || _event->type == SDL_MOUSEBUTTONUP) {
+        // PrintF("", _event->button.button);
+        return;
+    } else if (_event->type == SDL_MOUSEWHEEL) {
+        // PrintF("", _event->wheel);
         return;
     } else if (_event->type == SDL_WINDOWEVENT) {
         // System specific window events.
         return;
     }
 
-    // TODO: remove debug code:
+    // TODO: Debug code:
     PrintF("!UNHANDLED EVENT TRIGGERED RERENDER (type: %d)!\n", _event->type);
 }
 
@@ -186,6 +207,7 @@ i32 main(i32 argc, constptr char **argv, constptr char **_envp)
 
     SDL_Init(SDL_INIT_VIDEO);
     SDL_SetHint(SDL_HINT_VIDEO_ALLOW_SCREENSAVER, "1");
+    SDL_EnableScreenSaver();
 
     SDL_Window *sdlWindow = SDL_CreateWindow("Main Window",
                                             SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
