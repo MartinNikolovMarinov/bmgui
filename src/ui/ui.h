@@ -89,7 +89,16 @@ namespace ui
 
     struct Mouse {
         MouseBtn buttons[(i32)MouseBtn::MAX];
-        Vec2D pos, prevPos, delta, scrollDelta;
+        Vec2D pos, prevPos;
+        /**
+         * The differential of prev x and y and the current x and y.
+        */
+        Vec2D delta;
+        /**
+         * The mouse scroll delta is a Vec2D on propose, because some devices have y-axis scroll wheel. Might not
+         * want to support this.
+        */
+        Vec2D scrollDelta;
         bool8 isGrabbing, isGrabbed, isUnGrabbed;
     };
 

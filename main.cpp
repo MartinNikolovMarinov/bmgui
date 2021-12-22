@@ -138,21 +138,6 @@ void HandleKeyPress(constptr SDL_Event *_event, modptr UiCtx* _ctx)
     }
 }
 
-void HandleMouseMove(constptr SDL_Event *_event, modptr UiCtx* _ctx)
-{
-    // _event->motion.state
-    _ctx->input.mouse.pos.x = _event->motion.x;
-    _ctx->input.mouse.pos.y = _event->motion.y;
-    _ctx->input.mouse.delta.x = _event->motion.xrel;
-    _ctx->input.mouse.delta.y = _event->motion.yrel;
-
-    PrintF("EVENT MOUSE MOVE: x = %d, y = %d, dx = %d, dy = %d\n",
-            _event->motion.x,
-            _event->motion.y,
-            _ctx->input.mouse.delta.x,
-            _ctx->input.mouse.delta.y);
-}
-
 void HandleEvent(constptr SDL_Event *_event, modptr bool8 *_quit, modptr UiCtx* _ctx)
 {
     if (_event->type == SDL_QUIT) {
@@ -183,13 +168,25 @@ void HandleEvent(constptr SDL_Event *_event, modptr bool8 *_quit, modptr UiCtx* 
         // TODO: Keymapchange seems to happen on every button press. Why ?
         return;
     } else if (_event->type == SDL_MOUSEMOTION) {
-        HandleMouseMove(_event, _ctx);
+        _ctx->input.mouse.prevPos.x = _ctx->input.mouse.pos.x;
+        _ctx->input.mouse.prevPos.y = _ctx->input.mouse.pos.y;
+        _ctx->input.mouse.pos.x = _event->motion.x;
+        _ctx->input.mouse.pos.y = _event->motion.y;
+        _ctx->input.mouse.delta.x = _event->motion.xrel;
+        _ctx->input.mouse.delta.y = _event->motion.yrel;
+
+        // // TODO: Debug code:
+        // PrintF("EVENT MOUSE MOVE: x = %d, y = %d, dx = %d, dy = %d, px = %d, py = %d\n",
+        //         _event->motion.x, _event->motion.y,
+        //         _ctx->input.mouse.delta.x, _ctx->input.mouse.delta.y,
+        //         _ctx->input.mouse.prevPos.x, _ctx->input.mouse.prevPos.y);
+        return;
+    } else if (_event->type == SDL_MOUSEWHEEL) {
+        _ctx->input.mouse.scrollDelta.x = _event->wheel.x;
+        _ctx->input.mouse.scrollDelta.y = _event->wheel.y;
         return;
     } else if (_event->type == SDL_MOUSEBUTTONDOWN || _event->type == SDL_MOUSEBUTTONUP) {
         // PrintF("", _event->button.button);
-        return;
-    } else if (_event->type == SDL_MOUSEWHEEL) {
-        // PrintF("", _event->wheel);
         return;
     } else if (_event->type == SDL_WINDOWEVENT) {
         // System specific window events.
