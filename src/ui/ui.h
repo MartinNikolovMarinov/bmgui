@@ -6,61 +6,45 @@
 
 namespace ui
 {
-    struct Vec2D    { i32 x, y; };
-    struct Rect     { i32 x, y, w, h; };
-    struct RGBColor { u8 r, g, b, a; };
+    struct Rect {
+        i32 x, y, w, h;
+    };
+    void RectScale(modptr Rect *_rect, f32 _scalar);
+    Rect RectScaleCopy(constptr Rect *_rect, f32 _scalar);
 
-    enum class Alpha {
+    struct Vec2D    { i32 x, y; };
+    struct RGBColor { u8 r, g, b, a; };
+    union Thinkness {
+        struct {
+            Vec2D top;
+            Vec2D bottom;
+        };
+        struct {
+            i32 topX, topY;
+            i32 bottomX, bottomY;
+        };
+    };
+
+    enum struct Alpha : u8 {
         Transperant = 0,
         Opeque      = 255
     };
 
     // Constant colors:
-    global_variable RGBColor Black = { 0x00, 0x00, 0x00, (u8)Alpha::Opeque };
-    global_variable RGBColor White = { 0xFF, 0xFF, 0xFF, (u8)Alpha::Opeque };
-    global_variable RGBColor Red   = { 0xFF, 0x00, 0x00, (u8)Alpha::Opeque };
-    global_variable RGBColor Green = { 0x00, 0xFF, 0x00, (u8)Alpha::Opeque };
-    global_variable RGBColor Blue  = { 0x00, 0x00, 0xFF, (u8)Alpha::Opeque };
-    global_variable RGBColor Cyan  = { 0x00, 0xFF, 0xFF, (u8)Alpha::Opeque };
-
-    enum class BlendMode {
-        /*
-            No Blending
-                dstRGBA = srcRGBA
-        */
-        BLENDMODE_NONE = 0x00000000,
-        /*
-            Alpha Blending
-                dstRGB = (srcRGB * srcA) + (dstRGB * (1-srcA))
-                dstA = srcA + (dstA * (1-srcA))
-        */
-        BLENDMODE_BLEND = 0x00000001,
-        /*
-            Additive Blending
-                dstRGB = (srcRGB * srcA) + dstRGB
-                dstA = dstA
-        */
-        BLENDMODE_ADD = 0x00000002,
-        /*
-            Color Modulate
-                dstRGB = srcRGB * dstRGB
-                dstA = dstA
-        */
-        BLENDMODE_MOD = 0x00000004,
-        /*
-            Color Multiply
-                dstRGB = (srcRGB * dstRGB) + (dstRGB * (1-srcA))
-                dstA = (srcA * dstA) + (dstA * (1-srcA))
-        */
-        BLENDMODE_MUL = 0x00000008,
-    };
+    global_variable RGBColor NoColor = { 0x00, 0x00, 0x00, (u8)Alpha::Transperant };
+    global_variable RGBColor Black   = { 0x00, 0x00, 0x00, (u8)Alpha::Opeque };
+    global_variable RGBColor White   = { 0xFF, 0xFF, 0xFF, (u8)Alpha::Opeque };
+    global_variable RGBColor Red     = { 0xFF, 0x00, 0x00, (u8)Alpha::Opeque };
+    global_variable RGBColor Green   = { 0x00, 0xFF, 0x00, (u8)Alpha::Opeque };
+    global_variable RGBColor Blue    = { 0x00, 0x00, 0xFF, (u8)Alpha::Opeque };
+    global_variable RGBColor Cyan    = { 0x00, 0xFF, 0xFF, (u8)Alpha::Opeque };
 
     struct Key {
         bool8 isDown, isHeld;
         i32 keyCode, KeyScanCodeUSB;
     };
 
-    enum class ModifierFlags {
+    enum struct ModifierFlags : u32 {
         NONE        = 0,
         CTRL        = 1 << 0,
         SHIFT       = 1 << 1,
@@ -79,7 +63,7 @@ namespace ui
         i32 pressedKeysLen;
     };
 
-    enum class MouseBtn {
+    enum struct MouseBtn : u32 {
         LEFT,
         MIDDLE,
         RIGHT,
@@ -99,7 +83,7 @@ namespace ui
          * want to support this.
         */
         Vec2D scrollDelta;
-        bool8 isGrabbing, isGrabbed, isUnGrabbed;
+        // bool8 isGrabbing, isGrabbed, isUnGrabbed; // TODO: implement mouse drag.
     };
 
     struct Input {
@@ -107,8 +91,34 @@ namespace ui
         Mouse mouse;
     };
 
+    /**
+     * UI Context is where the entire state for the library is stored.
+    */
     struct UiCtx {
         Input input;
+
+        // MemoryAllocator *allocator; // TODO: think about memory allocation interface.
+    };
+
+    /**
+     * UI Component.
+    */
+    struct UiComp {
+        i32 id = 0;
+        Rect rect = {};
+        Thinkness margin = {};
+        Thinkness padding = {};
+
+        // f32 boarderRadius; // TODO: use bezier curves for rounded corners ?
+
+        RGBColor bgColor = NoColor;
+        RGBColor boarderColor = NoColor;
+        i32 boarderSizeInPx = 0;
+
+        // TextureStyle *bgTextureStyle; // TODO: think about texture background.
+        // TextureStyle *boarderTextureStyle;
+
+        // TODO: Think about inherited styles and how styles will be grouped in general.
     };
 } // namespace ui
 

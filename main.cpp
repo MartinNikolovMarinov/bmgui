@@ -97,7 +97,7 @@ void HandleKeyPress(constptr SDL_Event *_event, modptr UiCtx* _ctx)
     Keyboard oldKeyboardCopy = _ctx->input.keyboard; // Copy the keyboard structure
     _ctx->input.keyboard.pressedKeysLen = 0; // Set the length of the current keyboard keys to 0
 
-    // Iterate over the previously set keyboard keys.
+    // Iterate over the previously set keyboard keys and start setting currently pressed keys.
     // Skip over all keys that are NO longer pressed.
     // If the key was found consider it pressed. It's "probably" already considered pressed, but still...
     // Any key that was previously pressed is now considered "held".
@@ -197,6 +197,39 @@ void HandleEvent(constptr SDL_Event *_event, modptr bool8 *_quit, modptr UiCtx* 
     PrintF("!UNHANDLED EVENT TRIGGERED RERENDER (type: %d)!\n", _event->type);
 }
 
+Optional<i32> DebugRenderRect(SDL_Renderer *_renderer, Rect _rect, RGBColor _color)
+{
+    Assert(_renderer != null);
+
+    i32 errCode;
+    if (errCode = SDL_SetRenderDrawColor(_renderer, _color.r, _color.g, _color.b, _color.a); errCode != 0) {
+        return Optional<i32>(errCode, SDL_GetError());
+    }
+    if (errCode = SDL_SetRenderDrawBlendMode(_renderer, SDL_BLENDMODE_NONE); errCode != 0) {
+        return Optional<i32>(errCode, SDL_GetError());
+    }
+    SDL_Rect sdlRect = { _rect.x, _rect.y, _rect.w, _rect.h };
+    if (errCode = SDL_RenderFillRect(_renderer, &sdlRect); errCode != 0) {
+        return Optional<i32>(errCode, SDL_GetError());
+    }
+
+    return Optional<i32>(errCode, null);
+}
+
+Optional<i32> DebugRenderUiComp(SDL_Renderer *_renderer, UiComp *_comp)
+{
+    Assert(_renderer != null);
+    Assert(_comp != null);
+
+    // FIXME: Use addition instead of scaling for this!
+    f32 scaleFactor = (f32)_comp->boarderSizeInPx / 10;
+    Rect boarderRect = RectScaleCopy(&_comp->rect, scaleFactor);
+    TryOrReturn(DebugRenderRect(_renderer, boarderRect, _comp->boarderColor));
+    TryOrReturn(DebugRenderRect(_renderer, _comp->rect, _comp->bgColor));
+
+    return Optional<i32>((i32)core::ErrCodes::OK, null);
+}
+
 i32 main(i32 argc, constptr char **argv, constptr char **_envp)
 {
     const i32 DELAY = 40;
@@ -241,6 +274,17 @@ i32 main(i32 argc, constptr char **argv, constptr char **_envp)
                 eventsCount++;
             }
         }
+
+        UiComp comp1 = {};
+        comp1.id = 1;
+        comp1.rect = (Rect){ 200, 200, 100, 100 };
+        comp1.bgColor = Red;
+        comp1.boarderColor = Black;
+        comp1.boarderSizeInPx = 1;
+        comp1.margin = {};
+        comp1.padding = {};
+
+        TryOrFail(DebugRenderUiComp(sdlRenderer, &comp1));
 
         // Handle events.
         for (i32 i = 0; i < eventsCount; i++) {
