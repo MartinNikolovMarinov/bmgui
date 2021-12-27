@@ -5,6 +5,76 @@
 using namespace core;
 using namespace ui;
 
+/**
+ * \brief Loads and image from a file.
+ *
+ * \param _img The image carrying the pixel data will be set.
+ * \param _path The path to the image on the file system.
+ *
+ * \returns Optional with error code.
+*/
+Optional<i32> ImageFromFile(Image *_img, constptr char* _path)
+{
+    Assert(_img != null);
+    Assert(_path != null);
+    SDL_Surface* data = SDL_LoadBMP(_path);
+    if (data == null) {
+        return Optional<i32>((i32)core::ErrCodes::ERROR, SDL_GetError());
+    }
+    _img->pixelData = (void*)data;
+    _img->w = data->w;
+    _img->h = data->h;
+    return Optional<i32>((i32)core::ErrCodes::OK, null);
+}
+
+/**
+ * \brief Converts pixel data from an image to a driver specifc texture.
+ *
+ * \param _rendere The driver specifc renderer.
+ * \param _img The image carrying the pixel data that will be copied to the texture.
+ * \param _out The output texture.
+ *
+ * \returns Optional with error code.
+*/
+Optional<i32> ImageToTexture(SDL_Renderer *_renderer, constptr Image* _img, modptr SDL_Texture** _out)
+{
+    Assert(_renderer != null);
+    Assert(_img != null);
+    Assert(_out != null);
+    SDL_Surface *sdlSurface = (SDL_Surface *)_img->pixelData;
+    Assert(sdlSurface != null);
+    SDL_Texture *texture = SDL_CreateTextureFromSurface(_renderer, sdlSurface);
+    if (texture == null) {
+        return Optional<i32>((i32)core::ErrCodes::ERROR, SDL_GetError());
+    }
+    *_out = texture;
+    return Optional<i32>((i32)core::ErrCodes::OK, null);
+}
+
+/**
+ * \brief The color key defines a pixel value that will be treated as transparent.
+ *        In other words, the pixel will be ignored when rendering.
+ *        This is similar to a visual-effects and post-production technique called
+ *        chroma keys https://en.wikipedia.org/wiki/Chroma_key
+ *
+ * \param _img The image carrying the pixel data.
+ * \param _color The red, green and blue values of the color key pixel.
+ *
+ * \returns Optional with error code.
+*/
+Optional<i32> ImageSetColorKey(modptr Image *_img, constptr RGBColor *_color)
+{
+    Assert(_img != null);
+    Assert(_color != null);
+    SDL_Surface *sdlSurface = (SDL_Surface *)_img->pixelData;
+    u32 pixel = SDL_MapRGB(sdlSurface->format, 0, 0xFF, 0xFF);
+    i32 errCode = SDL_SetColorKey(sdlSurface, SDL_TRUE, pixel);
+    if (errCode != 0) {
+        return Optional<i32>(errCode, SDL_GetError());
+    }
+    return Optional<i32>(errCode, null);
+}
+
 Optional<i32> PullEventFromSDLQueueBlocking(modptr SDL_Event *_event)
 {
     i32 errCode = SDL_WaitEvent(_event);
@@ -17,6 +87,13 @@ Optional<i32> PullEventFromSDLQueueBlocking(modptr SDL_Event *_event)
 bool8 PullEventFromSDLQueue(modptr SDL_Event *_event)
 {
     return SDL_PollEvent(_event) > 0;
+}
+
+SDL_Rect ToSDLRect(constptr Rect *_r)
+{
+    Assert(_r != null);
+    SDL_Rect ret = (SDL_Rect){ _r->x, _r->y, _r->w, _r->h };
+    return ret;
 }
 
 char* DEBUG_ModifierToCharPtr(ModifierFlags mod, modptr char* buff)
@@ -205,9 +282,6 @@ Optional<i32> DebugRenderRect(SDL_Renderer *_renderer, Rect _rect, RGBColor _col
     if (errCode = SDL_SetRenderDrawColor(_renderer, _color.r, _color.g, _color.b, _color.a); errCode != 0) {
         return Optional<i32>(errCode, SDL_GetError());
     }
-    if (errCode = SDL_SetRenderDrawBlendMode(_renderer, SDL_BLENDMODE_NONE); errCode != 0) {
-        return Optional<i32>(errCode, SDL_GetError());
-    }
     SDL_Rect sdlRect = { _rect.x, _rect.y, _rect.w, _rect.h };
     if (errCode = SDL_RenderFillRect(_renderer, &sdlRect); errCode != 0) {
         return Optional<i32>(errCode, SDL_GetError());
@@ -216,41 +290,157 @@ Optional<i32> DebugRenderRect(SDL_Renderer *_renderer, Rect _rect, RGBColor _col
     return Optional<i32>(errCode, null);
 }
 
-Optional<i32> DebugRenderUiComp(SDL_Renderer *_renderer, UiComp *_comp)
+Optional<i32> RenderUiRectComponent(SDL_Renderer *_renderer, UiComp *_comp)
 {
     Assert(_renderer != null);
     Assert(_comp != null);
 
-    // FIXME: Use addition instead of scaling for this!
-    f32 scaleFactor = (f32)_comp->boarderSizeInPx / 10;
-    Rect boarderRect = RectScaleCopy(&_comp->rect, scaleFactor);
-    TryOrReturn(DebugRenderRect(_renderer, boarderRect, _comp->boarderColor));
+    if (_comp->boarder.top > 0) {
+        Rect topBoarderRect;
+        topBoarderRect.x = _comp->rect.x - _comp->boarder.left; // Compensate for left boarder.
+        topBoarderRect.y = _comp->rect.y - _comp->boarder.top;
+        topBoarderRect.w = _comp->rect.w + _comp->boarder.left; // Compensate for left boarder.
+        topBoarderRect.h = _comp->boarder.top;
+        TryOrReturn(DebugRenderRect(_renderer, topBoarderRect, _comp->boarderColorTop));
+    }
+    if (_comp->boarder.right > 0) {
+        Rect leftBoarder;
+        leftBoarder.x = _comp->rect.x + _comp->rect.w;
+        leftBoarder.y = _comp->rect.y - _comp->boarder.top; // Compensate for top boarder.
+        leftBoarder.w = _comp->boarder.right;
+        leftBoarder.h = _comp->rect.h + _comp->boarder.top; // Compensate for top boarder.
+        TryOrReturn(DebugRenderRect(_renderer, leftBoarder, _comp->boarderColorRight));
+    }
+    if (_comp->boarder.bottom > 0) {
+        Rect bottomBoarderRect;
+        bottomBoarderRect.x = _comp->rect.x;
+        bottomBoarderRect.y = _comp->rect.y + _comp->rect.h;
+        bottomBoarderRect.w = _comp->rect.w + _comp->boarder.right; // Compensate for right boarder.
+        bottomBoarderRect.h = _comp->boarder.bottom;
+        TryOrReturn(DebugRenderRect(_renderer, bottomBoarderRect, _comp->boarderColorBottom));
+    }
+    if (_comp->boarder.left > 0) {
+        Rect leftBoarder;
+        leftBoarder.x = (_comp->rect.x - _comp->boarder.left);
+        leftBoarder.y = _comp->rect.y;
+        leftBoarder.w = _comp->boarder.left;
+        leftBoarder.h = _comp->rect.h + _comp->boarder.bottom; // Compensate for bottom boarder.
+        TryOrReturn(DebugRenderRect(_renderer, leftBoarder, _comp->boarderColorLeft));
+    }
+
     TryOrReturn(DebugRenderRect(_renderer, _comp->rect, _comp->bgColor));
 
     return Optional<i32>((i32)core::ErrCodes::OK, null);
 }
 
+
+/* SDL Renderer API
+
+ SDL_Texture* SDL_CreateTexture(SDL_Renderer * renderer, Uint32 format, int access, int w, int h);
+
+ int SDL_QueryTexture(SDL_Texture * texture, Uint32 * format, int *access, int *w, int *h);
+ int SDL_QueryTexture(SDL_Texture * texture, Uint32 * format, int *access, int *w, int *h);
+
+ int SDL_GetTextureColorMod(SDL_Texture * texture, Uint8 * r, Uint8 * g, Uint8 * b);
+ int SDL_SetTextureColorMod(SDL_Texture * texture, Uint8 r, Uint8 g, Uint8 b);
+
+ int SDL_GetTextureAlphaMod(SDL_Texture * texture, Uint8 * alpha);
+ int SDL_SetTextureAlphaMod(SDL_Texture * texture, Uint8 alpha);
+
+ int SDL_GetTextureBlendMode(SDL_Texture * texture, SDL_BlendMode *blendMode);
+ int SDL_SetTextureBlendMode(SDL_Texture * texture, SDL_BlendMode blendMode);
+
+ int SDL_GetTextureScaleMode(SDL_Texture * texture, SDL_ScaleMode *scaleMode);
+ int SDL_SetTextureScaleMode(SDL_Texture * texture, SDL_ScaleMode scaleMode);
+
+ int SDL_UpdateTexture(SDL_Texture * texture, const SDL_Rect * rect, const void *pixels, int pitch);
+
+ int SDL_LockTexture(SDL_Texture * texture, const SDL_Rect * rect, void **pixels, int *pitch);
+ void SDL_UnlockTexture(SDL_Texture * texture);
+
+ SDL_bool SDL_RenderTargetSupported(SDL_Renderer *renderer);
+ int SDL_SetRenderTarget(SDL_Renderer *renderer, SDL_Texture *texture);
+ SDL_Texture * SDL_GetRenderTarget(SDL_Renderer *renderer);
+
+ int SDL_RenderSetViewport(SDL_Renderer * renderer, const SDL_Rect * rect);
+ void SDL_RenderGetViewport(SDL_Renderer * renderer, SDL_Rect * rect);
+
+ int SDL_RenderSetClipRect(SDL_Renderer * renderer, const SDL_Rect * rect);
+ void SDL_RenderGetClipRect(SDL_Renderer * renderer, SDL_Rect * rect);
+ SDL_bool SDL_RenderIsClipEnabled(SDL_Renderer * renderer);
+
+ int SDL_RenderSetScale(SDL_Renderer * renderer, float scaleX, float scaleY);
+ void SDL_RenderGetScale(SDL_Renderer * renderer, float *scaleX, float *scaleY);
+
+ int SDL_SetRenderDrawColor(SDL_Renderer * renderer, Uint8 r, Uint8 g, Uint8 b, Uint8 a);
+ int SDL_GetRenderDrawColor(SDL_Renderer * renderer, Uint8 * r, Uint8 * g, Uint8 * b, Uint8 * a);
+
+ int SDL_SetRenderDrawBlendMode(SDL_Renderer * renderer, SDL_BlendMode blendMode);
+ int SDLCALL SDL_GetRenderDrawBlendMode(SDL_Renderer * renderer, SDL_BlendMode *blendMode);
+
+ int SDLCALL SDL_RenderClear(SDL_Renderer * renderer);
+
+ int SDL_RenderCopy(SDL_Renderer * renderer, SDL_Texture * texture, const SDL_Rect * srcrect, const SDL_Rect * dstrect);
+ int SDL_RenderCopyEx(SDL_Renderer * renderer,
+                     SDL_Texture * texture,
+                     const SDL_Rect * srcrect,
+                     const SDL_Rect * dstrect,
+                     const double angle,
+                     const SDL_Point *center,
+                     const SDL_RendererFlip flip);
+
+  int SDL_RenderGeometry(SDL_Renderer *renderer,
+                         SDL_Texture *texture,
+                         const SDL_Vertex *vertices,
+                         int num_vertices,
+                         const int *indices,
+                         int num_indices);
+  int SDL_RenderGeometryRaw(SDL_Renderer *renderer,
+                            SDL_Texture *texture,
+                            const float *xy, int xy_stride,
+                            const SDL_Color *color, int color_stride,
+                            const float *uv, int uv_stride,
+                            int num_vertices,
+                            const void *indices, int num_indices, int size_indices);
+
+
+*/
+
 i32 main(i32 argc, constptr char **argv, constptr char **_envp)
 {
     const i32 DELAY = 40;
     const i32 MAX_EVENTS_PER_FRAME = 20;
+    i32 errCode;
 
-    SDL_Init(SDL_INIT_VIDEO);
-    SDL_SetHint(SDL_HINT_VIDEO_ALLOW_SCREENSAVER, "1");
+    errCode = SDL_Init(SDL_INIT_VIDEO);
+    Assert(errCode == 0);
+    Assert(SDL_SetHint(SDL_HINT_VIDEO_ALLOW_SCREENSAVER, "1") == SDL_TRUE);
     SDL_EnableScreenSaver();
 
     SDL_Window *sdlWindow = SDL_CreateWindow("Main Window",
                                             SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                                             800, 600, SDL_WINDOW_RESIZABLE);
+    Assert(sdlWindow != null);
     SDL_Renderer *sdlRenderer = SDL_CreateRenderer(sdlWindow, -1, SDL_RENDERER_ACCELERATED);
+    Assert(sdlRenderer != null);
+
+    errCode = SDL_SetRenderDrawBlendMode(sdlRenderer, SDL_BLENDMODE_BLEND);
+    Assert(errCode == 0);
+
+    // Image img = {};
+    // TryOrFail(ImageFromFile(&img, "./data/imgs/sample_1280×853.bmp"));
+    // SDL_Texture *imgTexture;
+    // TryOrFail(ImageToTexture(sdlRenderer, &img, &imgTexture));
 
     UiCtx uiCtx = {};
     bool8 quit = false;
     while (!quit) {
         // Clean screen.
         RGBColor *clearColor = &White;
-        SDL_SetRenderDrawColor(sdlRenderer, clearColor->r, clearColor->g, clearColor->b, clearColor->a);
-        SDL_RenderClear(sdlRenderer);
+        errCode = SDL_SetRenderDrawColor(sdlRenderer, clearColor->r, clearColor->g, clearColor->b, clearColor->a);
+        Assert(errCode == 0);
+        errCode = SDL_RenderClear(sdlRenderer); // NOTE: Ignores viewports and clears the entire screen !
+        Assert(errCode == 0);
 
         // Block until first event. This prevents useless work while window is inactive.
         SDL_Event events[MAX_EVENTS_PER_FRAME];
@@ -275,16 +465,28 @@ i32 main(i32 argc, constptr char **argv, constptr char **_envp)
             }
         }
 
+        // IMPORTANT: every element should be it's own texture ??
         UiComp comp1 = {};
         comp1.id = 1;
-        comp1.rect = (Rect){ 200, 200, 100, 100 };
-        comp1.bgColor = Red;
-        comp1.boarderColor = Black;
-        comp1.boarderSizeInPx = 1;
+        comp1.rect = (Rect){ 280, 123, 157, 337 };
+        comp1.bgColor = { Red.r, Red.g, Red.b, 150 };
+        comp1.boarderColorTop = Black;
+        comp1.boarderColorLeft = Green;
+        comp1.boarderColorBottom = Blue;
+        comp1.boarderColorRight = Cyan;
+        comp1.boarder = (Thinkness){ 3, 5, 7, 8 };
         comp1.margin = {};
         comp1.padding = {};
 
-        TryOrFail(DebugRenderUiComp(sdlRenderer, &comp1));
+        TryOrFail(RenderUiRectComponent(sdlRenderer, &comp1));
+
+        // SDL_Vertex vertices[3] = {
+        //     { (SDL_FPoint){ 400, 200 }, (SDL_Color){ Blue.r, Blue.g, Blue.b, 60 } },
+        //     { (SDL_FPoint){ 700, 450 }, (SDL_Color){ Green.r, Green.g, Green.b, 60 } },
+        //     { (SDL_FPoint){ 600, 450 }, (SDL_Color){ Blue.r, Blue.g, Blue.b, 60 } }
+        // };
+        // errCode = SDL_RenderGeometry(sdlRenderer, null, vertices, 3, null, 0);
+        // Assert(errCode == 0);
 
         // Handle events.
         for (i32 i = 0; i < eventsCount; i++) {
@@ -295,6 +497,8 @@ i32 main(i32 argc, constptr char **argv, constptr char **_envp)
         SDL_RenderPresent(sdlRenderer);
     }
 
+    // SDL_DestroyTexture(imgTexture);
+    SDL_DestroyRenderer(sdlRenderer);
     SDL_DestroyWindow(sdlWindow);
     SDL_Quit();
 

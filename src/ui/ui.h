@@ -6,24 +6,15 @@
 
 namespace ui
 {
-    struct Rect {
-        i32 x, y, w, h;
-    };
-    void RectScale(modptr Rect *_rect, f32 _scalar);
-    Rect RectScaleCopy(constptr Rect *_rect, f32 _scalar);
+    struct Rect { i32 x, y, w, h; };
+    void RectScale(modptr Rect *_rect, i32 _scalar);
+    Rect RectScaleCopy(constptr Rect *_rect, i32 _scalar);
 
     struct Vec2D    { i32 x, y; };
+
     struct RGBColor { u8 r, g, b, a; };
-    union Thinkness {
-        struct {
-            Vec2D top;
-            Vec2D bottom;
-        };
-        struct {
-            i32 topX, topY;
-            i32 bottomX, bottomY;
-        };
-    };
+
+    struct Thinkness { i32 left, top, right, bottom; };
 
     enum struct Alpha : u8 {
         Transperant = 0,
@@ -95,9 +86,14 @@ namespace ui
      * UI Context is where the entire state for the library is stored.
     */
     struct UiCtx {
-        Input input;
+        Input input = {};
 
         // MemoryAllocator *allocator; // TODO: think about memory allocation interface.
+    };
+
+    struct Image {
+        i32 w, h;
+        void *pixelData;
     };
 
     /**
@@ -112,8 +108,15 @@ namespace ui
         // f32 boarderRadius; // TODO: use bezier curves for rounded corners ?
 
         RGBColor bgColor = NoColor;
-        RGBColor boarderColor = NoColor;
-        i32 boarderSizeInPx = 0;
+        RGBColor boarderColorTop = NoColor;
+        RGBColor boarderColorLeft = NoColor;
+        RGBColor boarderColorBottom = NoColor;
+        RGBColor boarderColorRight = NoColor;
+
+        /**
+         * Boarder sizes are in pixels.
+        */
+        Thinkness boarder = {};
 
         // TextureStyle *bgTextureStyle; // TODO: think about texture background.
         // TextureStyle *boarderTextureStyle;
