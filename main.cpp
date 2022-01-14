@@ -228,7 +228,7 @@ void HandleEvent(constptr SDL_Event *_event, modptr bool8 *_quit, modptr UiCtx* 
         return;
     } else if (_event->type == SDL_TEXTINPUT) {
         // TODO: Debug code:
-        i32 textLen = StrLen(_event->text.text);
+        i32 textLen = CharPtrLen(_event->text.text);
         Optional<rune> optRune = RuneFromUTF8Sequence((uchar*)_event->text.text, textLen);
         if (optRune.err != null) {
             char panicMsg[50];
@@ -237,7 +237,7 @@ void HandleEvent(constptr SDL_Event *_event, modptr bool8 *_quit, modptr UiCtx* 
         }
         char testText[SDL_TEXTINPUTEVENT_TEXT_SIZE] = {};
         RuneToUTF8Sequence(optRune.val, (uchar*)testText);
-        AssertMsg(StrCmp(testText, _event->text.text) == 0, "UTF-8 Encode/Decode is failing");
+        AssertMsg(CharPtrCmp(testText, _event->text.text) == 0, "UTF-8 Encode/Decode is failing");
 
         PrintF("EVENT TEXT INPUT: value = %s, UTF-32 rune = %lu \n", _event->text.text, optRune.val);
         return;
