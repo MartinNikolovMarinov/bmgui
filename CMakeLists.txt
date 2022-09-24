@@ -33,7 +33,6 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 
 # Core library related:
 option(CORE_LIBRARY_SHARED "" ON) # FIXME: might want to statically link
-option(CORE_DEBUG "" ON)
 target_link_libraries(${PROJECT_NAME} core)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/libs/core/src)
 
