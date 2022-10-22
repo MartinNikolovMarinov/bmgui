@@ -19,7 +19,7 @@ set(SRC_FILES
 )
 
 add_executable(${PROJECT_NAME} ${SRC_FILES})
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 ############################### COMBILER OPTIONS #######################################################################
 
@@ -31,11 +31,42 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clan
         -Wall -Wextra -Wno-unknown-pragmas -Wno-unused-function
     )
 else()
-    message(FATAL_ERROR "[SANDBOX] Unsupported compiler!")
+    message(FATAL_ERROR "[BMGUI] Unsupported compiler!")
 endif()
 
-############################### DEFINITIONS ###########################################################################
+############################### DEFINITIONS ############################################################################
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
     -DPATH_TO_DATA="${CMAKE_CURRENT_SOURCE_DIR}/data"
 )
+
+############################### EXTERNAL LIBRARIES #####################################################################
+
+target_link_libraries(${PROJECT_NAME} fmt)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/libs/fmt)
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/libs/fmt/include)
+
+option(CORE_LIBRARY_SHARED "" ON)
+target_link_libraries(${PROJECT_NAME} core)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/libs/core/src)
+
+if (LINK_OPENGL)
+    set(OpenGL_GL_PREFERENCE GLVND)
+    find_package(OpenGL REQUIRED)
+    target_link_libraries(${PROJECT_NAME} ${OPENGL_LIBRARIES})
+    message(STATUS "[BMGUI] Linking with OpenGL: ${OPENGL_LIBRARIES}")
+    target_include_directories(${PROJECT_NAME} PRIVATE ${OPENGL_INCLUDE_DIRS})
+
+    find_package(GLEW REQUIRED)
+    target_link_libraries(${PROJECT_NAME} ${GLEW_LIBRARIES})
+    message(STATUS "[BMGUI] Linking with GLEW: ${GLEW_LIBRARIES}")
+    target_include_directories(${PROJECT_NAME} PRIVATE ${GLEW_INCLUDE_DIRS})
+endif()
+
+if (LINX_SFML)
+    find_package(SFML 2 REQUIRED COMPONENTS window system graphics)
+    target_link_libraries(${PROJECT_NAME} -lsfml-window -lsfml-graphics -lsfml-system ${SFML_LIBRARIES} ${SFML_DEPENDENCIES})
+    message(STATUS "[SANDBOX] Linking with SFML")
+
+    target_include_directories(${PROJECT_NAME} PRIVATE ${SFML_INCLUDE_DIR})
+endif()
