@@ -1,9 +1,0 @@
-[submodule "libs/core"]
-	path = libs/core
-	url = https://github.com/MartinNikolovMarinov/core.git
-[submodule "libs/fmt"]
-	path = libs/fmt
-	url = https://github.com/fmtlib/fmt.git
-[submodule "libs/glfw"]
-	path = libs/glfw
-	url = https://github.com/glfw/glfw.git
